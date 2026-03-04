@@ -115,6 +115,17 @@ FLOWER_RESULTS = {
 }
 
 
+SINGLE_FLOWER = {"A": "rose", "B": "tulip", "C": "chrysanthemum", "D": "dianthus"}
+
+PAIR_TO_FLOWER = {
+    ("A", "B"): "lily",
+    ("A", "D"): "bellflower",
+    ("B", "C"): "gerbera",
+    ("B", "D"): "peony",
+    ("C", "D"): "hydrangea",
+}
+
+
 def get_flower_from_answers(answers: list[str]) -> str:
     """Определяет цветок по списку ответов (7 букв A/B/C/D)."""
     if len(answers) != 7:
@@ -125,34 +136,23 @@ def get_flower_from_answers(answers: list[str]) -> str:
         if a in counts:
             counts[a] += 1
 
-    a, b, c, d = counts["A"], counts["B"], counts["C"], counts["D"]
-    total = 7
-    sorted_letters = sorted(counts.keys(), key=lambda x: -counts[x])
-    first, second = sorted_letters[0], sorted_letters[1]
-    first_count = counts[first]
-    second_count = counts[second]
+    # 1. Один вариант >= 5 — большинство (один)
+    for letter, count in counts.items():
+        if count >= 5:
+            return SINGLE_FLOWER[letter]
 
-    # Явное большинство одного варианта (4+ из 7)
-    if first_count >= 4:
-        return {"A": "rose", "B": "tulip", "C": "chrysanthemum", "D": "dianthus"}[first]
+    # 2. Два варианта по >= 3 — эти два
+    with_3_or_more = [letter for letter, count in counts.items() if count >= 3]
+    if len(with_3_or_more) == 2:
+        pair = tuple(sorted(with_3_or_more))
+        if pair in PAIR_TO_FLOWER:
+            return PAIR_TO_FLOWER[pair]
 
-    # Пары по описанию
-    if first_count >= 2 and second_count >= 2:
-        pair = tuple(sorted([first, second]))
-        if pair == ("A", "B"):
-            return "lily"
-        if pair == ("A", "D"):
-            return "bellflower"
-        if pair == ("B", "C"):
-            return "gerbera"
-        if pair == ("B", "D"):
-            return "peony"
-        if pair == ("C", "D"):
-            return "hydrangea"
-
-    # Микс A, B и C (мало D — 0 или 1)
-    if d <= 1 and a >= 1 and b >= 1 and c >= 1:
+    # 3. Три варианта по >= 2 — микс
+    with_2_or_more = [letter for letter, count in counts.items() if count >= 2]
+    if len(with_2_or_more) >= 3:
         return "orchid"
 
-    # По максимальному счёту при равномерном распределении
-    return {"A": "rose", "B": "tulip", "C": "chrysanthemum", "D": "dianthus"}[first]
+    # Fallback: по максимальному счёту
+    first = max(counts.keys(), key=lambda x: counts[x])
+    return SINGLE_FLOWER[first]

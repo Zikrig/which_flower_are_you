@@ -22,10 +22,16 @@ class QuizState(StatesGroup):
 
 
 INTRO_TEXT = (
-    "<b>Какой ты цветок?</b>\n\n"
+    "<b>Привет! Время расцветать!</b>\n\n"
     "Внимательно прочитай вопросы и выбери один ответ в каждом из них. "
     "Выбирай тот ответ, который наиболее близок к твоему поведению в реальной жизни.\n\n"
     "По итогам теста ты узнаешь, какой цветок лучше всего отражает твою индивидуальность."
+)
+
+START_KEYBOARD = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="НАЧАТЬ", callback_data="start_quiz")]
+    ]
 )
 
 def make_question_keyboard(question_num: int) -> InlineKeyboardMarkup:
@@ -73,10 +79,22 @@ async def send_question(message_or_callback, question_num: int, state: FSMContex
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
+    # логируем id пользователя в текстовый файл
+    try:
+        with open("users.txt", "a", encoding="utf-8") as f:
+            f.write(f"{message.from_user.id}\n")
+    except Exception as e:
+        logger.exception("Failed to save user id: %s", e)
+
+    await message.answer(INTRO_TEXT, reply_markup=START_KEYBOARD, parse_mode="HTML")
+
+
+@router.callback_query(F.data == "start_quiz")
+async def start_quiz(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
     await state.set_state(QuizState.answering)
     await state.update_data(answers=[])
-    await message.answer(INTRO_TEXT, parse_mode="HTML")
-    await send_question(message, 0, state)
+    await send_question(callback, 0, state)
 
 
 @router.callback_query(F.data.startswith("q"), QuizState.answering)
@@ -114,7 +132,10 @@ async def process_answer(callback: CallbackQuery, state: FSMContext):
     result_text = (
         f"<b>{flower['name']}</b>\n\n"
         f"{flower['description']}\n\n"
-        "<i>Хочешь пройти тест ещё раз? Нажми /start</i>"
+        
+        "Ищи садовника Ритку-Маргаритку - и забирай себя себе на память!"
+
+        "<i>Хочешь пройти тест ещё раз? Нажми /start</i>\n\n"
     )
     await callback.message.edit_text(result_text, parse_mode="HTML")
     await state.clear()

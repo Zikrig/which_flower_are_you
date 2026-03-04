@@ -130,11 +130,9 @@ async def process_answer(callback: CallbackQuery, state: FSMContext):
     flower_key = get_flower_from_answers(answers)
     flower = FLOWER_RESULTS[flower_key]
     result_text = (
-        f"<b>{flower['name']}</b>\n\n"
+        f"Вау, ты — <b>{flower['name']}</b>!\n\n"
         f"{flower['description']}\n\n"
-        
         "Ищи садовника Ритку-Маргаритку - и забирай себя себе на память!\n\n"
-
         "<i>Хочешь пройти тест ещё раз? Нажми /start</i>\n\n"
     )
     await callback.message.edit_text(result_text, parse_mode="HTML")

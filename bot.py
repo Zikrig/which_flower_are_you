@@ -133,7 +133,7 @@ async def process_answer(callback: CallbackQuery, state: FSMContext):
         f"<b>{flower['name']}</b>\n\n"
         f"{flower['description']}\n\n"
         
-        "Ищи садовника Ритку-Маргаритку - и забирай себя себе на память!"
+        "Ищи садовника Ритку-Маргаритку - и забирай себя себе на память!\n\n"
 
         "<i>Хочешь пройти тест ещё раз? Нажми /start</i>\n\n"
     )

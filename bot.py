@@ -112,6 +112,7 @@ async def process_answer(callback: CallbackQuery, state: FSMContext):
     flower_key = get_flower_from_answers(answers)
     flower = FLOWER_RESULTS[flower_key]
     result_text = (
+        f"<b>{flower['name']}</b>\n\n"
         f"{flower['description']}\n\n"
         "<i>Хочешь пройти тест ещё раз? Нажми /start</i>"
     )

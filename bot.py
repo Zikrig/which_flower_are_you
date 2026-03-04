@@ -21,36 +21,53 @@ class QuizState(StatesGroup):
     answering = State()
 
 
+INTRO_TEXT = (
+    "<b>Какой ты цветок?</b>\n\n"
+    "Внимательно прочитай вопросы и выбери один ответ в каждом из них. "
+    "Выбирай тот ответ, который наиболее близок к твоему поведению в реальной жизни.\n\n"
+    "По итогам теста ты узнаешь, какой цветок лучше всего отражает твою индивидуальность."
+)
+
 def make_question_keyboard(question_num: int) -> InlineKeyboardMarkup:
     q = QUESTIONS[question_num]
-    buttons = []
-    for letter, text in q["options"].items():
-        btn_text = f"{letter}) {text[:60]}..." if len(text) > 60 else f"{letter}) {text}"
-        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"q{question_num}_{letter}")])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    letters = list(q["options"].keys())
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=letters[0], callback_data=f"q{question_num}_{letters[0]}"),
+            InlineKeyboardButton(text=letters[1], callback_data=f"q{question_num}_{letters[1]}"),
+        ],
+        [
+            InlineKeyboardButton(text=letters[2], callback_data=f"q{question_num}_{letters[2]}"),
+            InlineKeyboardButton(text=letters[3], callback_data=f"q{question_num}_{letters[3]}"),
+        ],
+    ])
 
 
 def get_user_answers(state_data: dict) -> list:
     return state_data.get("answers", [])
 
 
-async def send_question(message_or_callback, question_num: int, state: FSMContext):
-    intro = (
-        "Внимательно прочитай вопросы и выбери один ответ в каждом из них. "
-        "Выбирай тот ответ, который наиболее близок к твоему поведению в реальной жизни. "
-        "По итогам теста ты узнаешь, какой цветок лучше всего отражает твою индивидуальность.\n\n"
-        if question_num == 0
-        else ""
-    )
+def format_question_message(question_num: int) -> str:
     q = QUESTIONS[question_num]
-    text = f"{intro}Вопрос №{q['num']}\n\n{q['text']}"
+    options_text = "\n".join(
+        f"<b>{letter}</b>) {text}" for letter, text in q["options"].items()
+    )
+    return (
+        f"<b>Вопрос №{q['num']}</b>\n\n"
+        f"{q['text']}\n\n"
+        f"{options_text}"
+    )
+
+
+async def send_question(message_or_callback, question_num: int, state: FSMContext):
     keyboard = make_question_keyboard(question_num)
+    text = format_question_message(question_num)
 
     if isinstance(message_or_callback, CallbackQuery):
         await message_or_callback.answer()
-        await message_or_callback.message.edit_text(text, reply_markup=keyboard)
+        await message_or_callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
     else:
-        await message_or_callback.answer(text, reply_markup=keyboard)
+        await message_or_callback.answer(text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.message(CommandStart())
@@ -58,6 +75,7 @@ async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     await state.set_state(QuizState.answering)
     await state.update_data(answers=[])
+    await message.answer(INTRO_TEXT, parse_mode="HTML")
     await send_question(message, 0, state)
 
 
@@ -95,7 +113,7 @@ async def process_answer(callback: CallbackQuery, state: FSMContext):
     flower = FLOWER_RESULTS[flower_key]
     result_text = (
         f"{flower['description']}\n\n"
-        "Хочешь пройти тест ещё раз? Нажми /start"
+        "<i>Хочешь пройти тест ещё раз? Нажми /start</i>"
     )
     await callback.message.edit_text(result_text, parse_mode="HTML")
     await state.clear()

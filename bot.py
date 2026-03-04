@@ -34,7 +34,7 @@ def get_user_answers(state_data: dict) -> list:
     return state_data.get("answers", [])
 
 
-async def send_question(message_or_callback, question_num: int, state: FSMContext, is_edit: bool = False):
+async def send_question(message_or_callback, question_num: int, state: FSMContext):
     intro = (
         "Внимательно прочитай вопросы и выбери один ответ в каждом из них. "
         "Выбирай тот ответ, который наиболее близок к твоему поведению в реальной жизни. "
@@ -46,9 +46,7 @@ async def send_question(message_or_callback, question_num: int, state: FSMContex
     text = f"{intro}Вопрос №{q['num']}\n\n{q['text']}"
     keyboard = make_question_keyboard(question_num)
 
-    if is_edit and hasattr(message_or_callback, "message"):
-        await message_or_callback.message.edit_text(text, reply_markup=keyboard)
-    elif hasattr(message_or_callback, "answer"):
+    if isinstance(message_or_callback, CallbackQuery):
         await message_or_callback.answer()
         await message_or_callback.message.edit_text(text, reply_markup=keyboard)
     else:
@@ -89,7 +87,7 @@ async def process_answer(callback: CallbackQuery, state: FSMContext):
     await state.update_data(answers=answers)
 
     if len(answers) < 7:
-        await send_question(callback, len(answers), state, is_edit=True)
+        await send_question(callback, len(answers), state)
         return
 
     # Все 7 ответов получены — показываем результат

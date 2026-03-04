@@ -1,0 +1,7 @@
+services:
+  bot:
+    build: .
+    env_file: .env
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+    restart: unless-stopped

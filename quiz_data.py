@@ -114,6 +114,21 @@ FLOWER_RESULTS = {
     },
 }
 
+# Карты картинок для результатов — ожидаются файлы с такими путями в проекте.
+# При необходимости скорректируй имена/папку под свои файлы.
+FLOWER_IMAGE_FILES = {
+    "rose": "data/Роза.png",
+    "tulip": "data/Тюльпан.png",
+    "chrysanthemum": "data/Хризантема.png",
+    "dianthus": "data/Диантус.png",
+    "orchid": "data/Орхидея.png",
+    "peony": "data/Пион.png",
+    "hydrangea": "data/Гортензия.png",
+    "lily": "data/Лилия.png",
+    "gerbera": "data/Гербера.png",
+    "bellflower": "data/Колокольчик.png",
+}
+
 
 SINGLE_FLOWER = {"A": "rose", "B": "tulip", "C": "chrysanthemum", "D": "dianthus"}
 

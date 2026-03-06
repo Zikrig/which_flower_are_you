@@ -4,13 +4,19 @@ import logging
 import os
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    Message,
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    FSInputFile,
+)
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN, ADMIN_IDS
-from quiz_data import QUESTIONS, FLOWER_RESULTS, get_flower_from_answers
+from quiz_data import QUESTIONS, FLOWER_RESULTS, FLOWER_IMAGE_FILES, get_flower_from_answers
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -317,7 +323,18 @@ async def process_answer(callback: CallbackQuery, state: FSMContext):
         f"{flower['description']}\n\n"
         f"{result_suffix}"
     )
-    await callback.message.edit_text(result_text, parse_mode="HTML")
+
+    image_path = FLOWER_IMAGE_FILES.get(flower_key)
+    if image_path:
+        try:
+            photo = FSInputFile(image_path)
+            await callback.message.answer_photo(photo=photo, caption=result_text, parse_mode="HTML")
+            await callback.message.delete()
+        except Exception as e:
+            logger.exception("Failed to send result image: %s", e)
+            await callback.message.edit_text(result_text, parse_mode="HTML")
+    else:
+        await callback.message.edit_text(result_text, parse_mode="HTML")
     await state.clear()
     await callback.answer()
 

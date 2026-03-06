@@ -142,13 +142,32 @@ async def start_quiz(callback: CallbackQuery, state: FSMContext):
     await send_question(callback, 0, state)
 
 
-@router.message(F.text == "/set_intro")
-async def set_intro(message: Message, state: FSMContext):
+@router.message(F.text.in_(("admin", "/admin")))
+async def admin_menu(message: Message, state: FSMContext):
     if not is_admin(message.from_user.id):
-        await message.answer("У тебя нет прав для изменения приветствия.")
+        await message.answer("У тебя нет прав доступа к админ-меню.")
+        return
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🔹 Приветствие", callback_data="admin_intro")],
+            [InlineKeyboardButton(text="🔹 Вопросы", callback_data="admin_questions")],
+            [InlineKeyboardButton(text="🔹 Итог", callback_data="admin_result")],
+        ]
+    )
+    await state.clear()
+    await message.answer("Админ-меню:", reply_markup=keyboard)
+
+
+@router.callback_query(F.data == "admin_intro")
+async def admin_intro(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("Нет прав.", show_alert=True)
         return
     await state.set_state(AdminState.waiting_intro)
-    await message.answer("Пришли новый текст приветственного сообщения (можно с HTML-разметкой).")
+    await callback.message.edit_text(
+        "Пришли новый текст приветственного сообщения (можно с HTML-разметкой)."
+    )
+    await callback.answer()
 
 
 @router.message(AdminState.waiting_intro)
@@ -163,25 +182,45 @@ async def save_intro(message: Message, state: FSMContext):
     await message.answer("Приветственное сообщение обновлено.")
 
 
-@router.message(F.text.startswith("/set_question"))
-async def set_question(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
-        await message.answer("У тебя нет прав для изменения вопросов.")
+@router.callback_query(F.data == "admin_questions")
+async def admin_questions(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("Нет прав.", show_alert=True)
         return
-    parts = message.text.split()
-    if len(parts) != 2 or not parts[1].isdigit():
-        await message.answer("Используй: /set_question N, где N — номер вопроса от 1 до 7.")
+    # клавиатура выбора номера вопроса
+    rows = []
+    for i in range(1, len(QUESTIONS) + 1):
+        rows.append(
+            [InlineKeyboardButton(text=f"Вопрос {i}", callback_data=f"admin_q_{i}")]
+        )
+    keyboard = InlineKeyboardMarkup(inline_keyboard=rows)
+    await callback.message.edit_text(
+        "Выбери вопрос, который хочешь изменить:", reply_markup=keyboard
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin_q_"))
+async def admin_question_pick(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("Нет прав.", show_alert=True)
         return
-    q_num = int(parts[1])
+    try:
+        q_num = int(callback.data.split("_")[-1])
+    except ValueError:
+        await callback.answer("Ошибка номера вопроса.", show_alert=True)
+        return
     if q_num < 1 or q_num > len(QUESTIONS):
-        await message.answer("Номер вопроса должен быть от 1 до 7.")
+        await callback.answer("Неверный номер вопроса.", show_alert=True)
         return
+
     await state.set_state(AdminState.waiting_question)
     await state.update_data(edit_question_num=q_num)
-    await message.answer(
+    await callback.message.edit_text(
         f"Пришли новый текст для вопроса {q_num}.\n"
         "Если хочешь добавить картинку, пришли фото с подписью — подпись станет текстом вопроса."
     )
+    await callback.answer()
 
 
 @router.message(AdminState.waiting_question)
@@ -193,7 +232,7 @@ async def save_question(message: Message, state: FSMContext):
     q_num = data.get("edit_question_num")
     if not q_num:
         await state.clear()
-        await message.answer("Состояние потеряно, попробуй ещё раз /set_question.")
+        await message.answer("Состояние потеряно, попробуй ещё раз через admin-меню.")
         return
 
     text = message.caption_html or message.html_text or message.text
@@ -211,16 +250,17 @@ async def save_question(message: Message, state: FSMContext):
     await message.answer(f"Вопрос {q_num} обновлён.")
 
 
-@router.message(F.text == "/set_result")
-async def set_result(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
-        await message.answer("У тебя нет прав для изменения итога.")
+@router.callback_query(F.data == "admin_result")
+async def admin_result(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("Нет прав.", show_alert=True)
         return
     await state.set_state(AdminState.waiting_result)
-    await message.answer(
+    await callback.message.edit_text(
         "Пришли новый текст итогового блока (что пишется после описания цветка).\n"
         "Можно использовать HTML-разметку."
     )
+    await callback.answer()
 
 
 @router.message(AdminState.waiting_result)

@@ -230,11 +230,16 @@ async def admin_question_pick(callback: CallbackQuery, state: FSMContext):
     base_q = QUESTIONS[q_num - 1]
     overrides = settings.get("questions", {}).get(str(q_num), {})
     current_text = overrides.get("text") or base_q["text"]
-    # полный текст: вопрос + варианты ответов
-    options_block = "\n".join(
-        f"{letter}) {text}" for letter, text in base_q["options"].items()
-    )
-    current_full = f"{current_text}\n\n{options_block}"
+    # полный текст: вопрос + варианты ответов,
+    # но если админ уже сохранил полный текст (с вариантами),
+    # не дублируем их второй раз
+    if overrides.get("text"):
+        current_full = current_text
+    else:
+        options_block = "\n".join(
+            f"{letter}) {text}" for letter, text in base_q["options"].items()
+        )
+        current_full = f"{current_text}\n\n{options_block}"
 
     await callback.message.edit_text(
         f"Текущий текст вопроса {q_num}:\n\n"

@@ -230,10 +230,15 @@ async def admin_question_pick(callback: CallbackQuery, state: FSMContext):
     base_q = QUESTIONS[q_num - 1]
     overrides = settings.get("questions", {}).get(str(q_num), {})
     current_text = overrides.get("text") or base_q["text"]
+    # полный текст: вопрос + варианты ответов
+    options_block = "\n".join(
+        f"{letter}) {text}" for letter, text in base_q["options"].items()
+    )
+    current_full = f"{current_text}\n\n{options_block}"
 
     await callback.message.edit_text(
         f"Текущий текст вопроса {q_num}:\n\n"
-        f"{current_text}\n\n"
+        f"{current_full}\n\n"
         f"Пришли новый текст для вопроса {q_num}.\n"
         "Если хочешь добавить картинку, пришли фото с подписью — подпись станет текстом вопроса.",
     )

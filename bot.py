@@ -169,9 +169,13 @@ async def admin_intro(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
         await callback.answer("Нет прав.", show_alert=True)
         return
+    current = get_intro_text()
     await state.set_state(AdminState.waiting_intro)
     await callback.message.edit_text(
-        "Пришли новый текст приветственного сообщения (можно с HTML-разметкой)."
+        "Текущее приветствие:\n\n"
+        f"{current}\n\n"
+        "Пришли новый текст приветственного сообщения (можно с HTML-разметкой).",
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -181,7 +185,7 @@ async def save_intro(message: Message, state: FSMContext):
     if not is_admin(message.from_user.id):
         await message.answer("У тебя нет прав для изменения приветствия.")
         return
-    text = message.html_text or message.text
+    text = message.text
     settings["intro_text"] = text
     save_settings(settings)
     await state.clear()
@@ -222,9 +226,16 @@ async def admin_question_pick(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(AdminState.waiting_question)
     await state.update_data(edit_question_num=q_num)
+
+    base_q = QUESTIONS[q_num - 1]
+    overrides = settings.get("questions", {}).get(str(q_num), {})
+    current_text = overrides.get("text") or base_q["text"]
+
     await callback.message.edit_text(
+        f"Текущий текст вопроса {q_num}:\n\n"
+        f"{current_text}\n\n"
         f"Пришли новый текст для вопроса {q_num}.\n"
-        "Если хочешь добавить картинку, пришли фото с подписью — подпись станет текстом вопроса."
+        "Если хочешь добавить картинку, пришли фото с подписью — подпись станет текстом вопроса.",
     )
     await callback.answer()
 
@@ -241,7 +252,8 @@ async def save_question(message: Message, state: FSMContext):
         await message.answer("Состояние потеряно, попробуй ещё раз через admin-меню.")
         return
 
-    text = message.caption_html or message.html_text or message.text
+    # для простоты считаем, что админ шлёт обычный текст или фото с подписью
+    text = message.caption or message.text
     photo_id = None
     if message.photo:
         photo_id = message.photo[-1].file_id
@@ -262,9 +274,17 @@ async def admin_result(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Нет прав.", show_alert=True)
         return
     await state.set_state(AdminState.waiting_result)
+    current = settings.get(
+        "result_suffix",
+        "Ищи садовника Ритку-Маргаритку - и забирай себя себе на память!\n\n"
+        "<i>Хочешь пройти тест ещё раз? Нажми /start</i>\n\n",
+    )
     await callback.message.edit_text(
+        "Текущий итоговый блок:\n\n"
+        f"{current}\n\n"
         "Пришли новый текст итогового блока (что пишется после описания цветка).\n"
-        "Можно использовать HTML-разметку."
+        "Можно использовать HTML-разметку.",
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -274,7 +294,7 @@ async def save_result(message: Message, state: FSMContext):
     if not is_admin(message.from_user.id):
         await message.answer("У тебя нет прав для изменения итога.")
         return
-    text = message.html_text or message.text
+    text = message.text
     settings["result_suffix"] = text
     save_settings(settings)
     await state.clear()
